@@ -1,0 +1,13 @@
+runtime: nodejs
+vm: true
+
+env_variables:
+  # --REQUIRED--
+  DATABASE_URI: mongodb://localhost:27017/registrationApp
+  APP_ID: 12345
+  MASTER_KEY: 12345
+  JAVASCRIPT_KEY: 12345
+  # --OPTIONAL--
+  # FILE_KEY: <your-file-key>
+  # PARSE_MOUNT: /parse
+  # CLOUD_CODE_MAIN:  
