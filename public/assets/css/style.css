@@ -236,3 +236,13 @@ a:visited {
   content: "";
 }
 
+/* verify email */
+.login {
+  display: none;
+}
+
+.login.show {
+  display: inline-block;
+  font-size: 1.5em;
+}
+

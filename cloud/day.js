@@ -9,7 +9,7 @@ Parse.Cloud.define('updateAllWH', function(request, response) {
   query.find().then( function(result) {
     result[0].set('workHours', {"from": wh.start, "to": wh.end});
     result[0].set('isSet', wh.isSet);
-    result[0].save().then( function(savedResult) {
+    result[0].save({}, { useMasterKey: true }).then( function(savedResult) {
       response.success(savedResult);
     }, function(error) {
       response.success(error);

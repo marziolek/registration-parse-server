@@ -40,7 +40,7 @@ Parse.Cloud.define('updateServices', function(request, response) {
           if (service.name) {
             promise = promise.then(function() {
               if (service.id) {
-                newService.set('objectId', service.id);
+                newService.set('id', service.id);
                 newService.set('name', service.name);
                 newService.set('priceFrom', service.priceFrom);
                 newService.set('priceTo', service.priceTo);
@@ -54,26 +54,26 @@ Parse.Cloud.define('updateServices', function(request, response) {
                 newService.set('isActive', service.isActive);
               }
 
-              return newService.save()
-            })
+              return newService.save({}, { useMasterKey: true });
+            });
           }
         });
 
         return promise;
       };
-
-  eachService().then( function() {
+  
+  eachService().then( function(result) {
     response.success(true)
-  }, function() {
+  }, function(result) {
     response.success(false)
   })
 });
 
 Parse.Cloud.define('removeService', function(request, response) {
   var query = new Parse.Query('Service');
-  
+
   query.get(request.params.id).then( function(result) {
-    return result.destroy();
+    return result.destroy({ useMasterKey: true });
   }).then( function(result) {
     response.success(result);
   }, function(error) {
