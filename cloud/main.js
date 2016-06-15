@@ -8,40 +8,51 @@ require('./service.js');
 require('./day.js');
 require('./visit.js');
 require('./reset-password.js');
+require('./users.js');
 require('./jobs.js');
 
 Parse.Cloud.define('newAccount', function(request, response) {
   var form = request.params.form,
       user = new Parse.User(),
-      token = Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2);
+      token = Math.random().toString(36).substr(2) + Math.random().toString(36).substr(2),
+      query = new Parse.Query('User');
 
-  user.set('email', form.email);
-  user.set('username', form.email);
-  user.set('firstName', form.name);
-  user.set('lastName', form.lastname);
-  user.set('password', form.password);
-  user.set('phone', form.phone);
-  user.set('textMessages', form.textMessages);
-  user.set('emailVerified', false);
-  user.set('emailVerifyToken', token);
+  query.equalTo('email', form.email);
+  query.first({
+    success: function(result) {
+      if (!result) {
+        user.set('email', form.email);
+        user.set('username', form.email);
+        user.set('firstName', form.name);
+        user.set('lastName', form.lastname);
+        user.set('password', form.password);
+        user.set('phone', form.phone);
+        user.set('textMessages', form.textMessages);
+        user.set('emailVerified', false);
+        user.set('emailVerifyToken', token);
 
-  user.signUp(null, {
-    success: function(user) {
-      var body = '<p>Dziękujemy za stworzenie konta!</p><p>Kliknij w <a href="http://marcin-ziolek.usermd.net/rejestracja/potwierdzenie-email?token=' + token +'">ten link</a>, aby potwierdzić swój adres email.</p><p>Jeśli link nie działa, skopiuj do przeglądarki poniższy adres:</p><p>http://marcin-ziolek.usermd.net/rejestracja/potwierdzenie-email?token=' + token +'</p>';
-      Parse.Cloud.run('sendEmail', {
-        mailData: {
-          email: form.email, 
-          subject: 'Weryfikacja email - rejestracja', 
-          body: body
-        }
-      }).then(function(result) {
-        response.success(result);
-      });
-    },
-    error: function(error) {
-      response.success(error);
-    },
-    useMasterKey: true
+        user.signUp(null, {
+          success: function(user) {
+            var body = '<p>Dziękujemy za stworzenie konta!</p><p>Kliknij w <a href="http://marcin-ziolek.usermd.net/rejestracja/potwierdzenie-email?token=' + token +'">ten link</a>, aby potwierdzić swój adres email.</p><p>Jeśli link nie działa, skopiuj do przeglądarki poniższy adres:</p><p>http://marcin-ziolek.usermd.net/rejestracja/potwierdzenie-email?token=' + token +'</p>';
+            Parse.Cloud.run('sendEmail', {
+              mailData: {
+                email: form.email, 
+                subject: 'Weryfikacja email - rejestracja', 
+                body: body
+              }
+            });
+
+            response.success(user);
+          },
+          error: function(error) {
+            response.success(error);
+          },
+          useMasterKey: true
+        });
+      } else {
+        response.success(false);
+      }
+    }
   });
 });
 
@@ -91,7 +102,7 @@ Parse.Cloud.afterSave(Parse.User, function(request) {
 //check if user is admin
 Parse.Cloud.define('isAdmin', function(request, response) {
   var query = (new Parse.Query(Parse.Role));
-  
+
   query.equalTo("name", "Administrator");
   query.equalTo("users", request.user);
   query.first().then(function(adminRole) {

@@ -29,9 +29,6 @@ Parse.Cloud.define('sendEmail', function(request, response) {
 
   // send mail with defined transport object
   transporter.sendMail(mailOptions, function(error, info){
-    if(error){
-      return console.log(error);
-    }
     response.success(info);
   });
 });

@@ -85,9 +85,8 @@ Parse.Cloud.define('getAllVisits', function(request, response) {
             var user = result.get('user');
 
             if (!user) {
-              user = result.userOneTime;
               var obj = {
-                user: user,
+                user: result.userOneTime,
                 date: result.attributes.date,
                 isCanceled: result.attributes.isCanceled,
                 additionalInformation: result.attributes.additionalInformation,
