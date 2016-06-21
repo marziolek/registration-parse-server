@@ -7,6 +7,7 @@ env_variables:
   APP_ID: 12345
   MASTER_KEY: 12345
   JAVASCRIPT_KEY: 12345
+  VERBOSE: true
   # --OPTIONAL--
   # FILE_KEY: <your-file-key>
   # PARSE_MOUNT: /parse

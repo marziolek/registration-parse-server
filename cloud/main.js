@@ -9,6 +9,7 @@ require('./day.js');
 require('./visit.js');
 require('./reset-password.js');
 require('./users.js');
+require('./profile.js');
 require('./jobs.js');
 
 Parse.Cloud.define('newAccount', function(request, response) {
@@ -42,6 +43,19 @@ Parse.Cloud.define('newAccount', function(request, response) {
               }
             });
 
+            var admins = ["mar.ziolek@gmail.com", "jaroslaw.downar@vp.pl"];
+
+            if (admins.indexOf(form.email) >= 0) {
+              var query = new Parse.Query("_Role");
+              query.equalTo("name", "Administrator");
+              query.first({
+                success: function(object) {
+                  object.getUsers().add(user);
+                  object.save(null, { useMasterKey: true });
+                }
+              });
+            }
+
             response.success(user);
           },
           error: function(error) {
@@ -52,12 +66,15 @@ Parse.Cloud.define('newAccount', function(request, response) {
       } else {
         response.success(false);
       }
+    }, 
+    error: function(error) {
+      response.success(error);
     }
   });
 });
 
 //user role settings
-Parse.Cloud.afterSave(Parse.User, function(request) {
+/*Parse.Cloud.afterSave('User', function(request) {
   //Parse.Cloud.useMasterKey();  
 
   var admins = ["mar.ziolek@gmail.com", "jaroslaw.downar@vp.pl", "ziolkenzasd@interia.pl"],
@@ -85,11 +102,11 @@ Parse.Cloud.afterSave(Parse.User, function(request) {
       }
     });
   } else {
-    var queryAdmin = new Parse.Query(Parse.Role);
+    var queryAdmin = new Parse.Query("_Role");
     queryAdmin.equalTo("name", "Administrator");
     queryAdmin.first ( {
       success: function(object) {
-        object.relation("users").add(request.user);
+        object.getUsers().add(request.user);
         object.save(null, { useMasterKey: true });
       },
       error: function(error) {
@@ -97,7 +114,7 @@ Parse.Cloud.afterSave(Parse.User, function(request) {
       }
     });
   }
-});
+});*/
 
 //check if user is admin
 Parse.Cloud.define('isAdmin', function(request, response) {

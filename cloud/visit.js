@@ -35,14 +35,15 @@ Parse.Cloud.define('bookVisit', function(request, response) {
         newReservation.save(null, {
           success: function(result) {
             if (result.id) {
-
-              Parse.Cloud.run('sendEmail', {
-                mailData: {
-                  email: emailEmail, 
-                  subject: emailSubject,
-                  body: emailBody
-                }
-              })
+              if (emailEmail) {
+                Parse.Cloud.run('sendEmail', {
+                  mailData: {
+                    email: emailEmail, 
+                    subject: emailSubject,
+                    body: emailBody
+                  }
+                });
+              }
             };
             response.success(result);
           },
@@ -76,34 +77,21 @@ Parse.Cloud.define('getAllVisits', function(request, response) {
         visits = new Parse.Query('Reservation');
 
     visits.greaterThanOrEqualTo('date', from);
-    visits.ascending('date');
+    //visits.descending('userOneTime');
     visits.include('User');
     visits.find({
       success: function(results) {
         if (results.length > 0) {
+          var i = 0;
+
           _.each(results, function(result) {
             var user = result.get('user');
 
-            if (!user) {
-              var obj = {
-                user: result.userOneTime,
-                date: result.attributes.date,
-                isCanceled: result.attributes.isCanceled,
-                additionalInformation: result.attributes.additionalInformation,
-                userOneTime: result.attributes.userOneTime,
-                id: result.id
-              };
-
-              allVisits.push(obj);
-
-              if (results.length == results.indexOf(result) + 1) {
-                response.success([allVisits, true]);
-              }
-            } else {
+            if (user) {
               user.fetch({
-                success: function(user) {
+                success: function(u) {
                   var obj = {
-                    user: user,
+                    user: u,
                     date: result.attributes.date,
                     isCanceled: result.attributes.isCanceled,
                     additionalInformation: result.attributes.additionalInformation,
@@ -112,7 +100,8 @@ Parse.Cloud.define('getAllVisits', function(request, response) {
                   };
 
                   allVisits.push(obj);
-                  if (results.length == results.indexOf(result) + 1) {
+                  i++;
+                  if (results.length == i) {
                     firstVisitEver.ascending('date');
                     firstVisitEver.first({
                       success: function(result) {
@@ -128,10 +117,50 @@ Parse.Cloud.define('getAllVisits', function(request, response) {
                     });              
                   }
                 },
-                error: function(error) {
-                  response.success(error);
+                error: function(e) {
+                  var obj = {
+                    user: e,
+                    date: result.attributes.date,
+                    isCanceled: result.attributes.isCanceled,
+                    additionalInformation: result.attributes.additionalInformation,
+                    userOneTime: result.attributes.userOneTime,
+                    id: result.id
+                  };
+
+                  allVisits.push(obj);
+                  i++;
+                  if (results.length == i) {
+                    firstVisitEver.ascending('date');
+                    firstVisitEver.first({
+                      success: function(result) {
+                        if (formatDate(result.attributes.date) < formatDate(from)) {
+                          response.success([allVisits, true]);
+                        } else {
+                          response.success([allVisits, false]);
+                        }
+                      },
+                      error: function(result) {
+                        response.success(result);
+                      }
+                    });              
+                  }
                 }
               });
+            } else {
+              var obj = {
+                user: result.userOneTime,
+                date: result.attributes.date,
+                isCanceled: result.attributes.isCanceled,
+                additionalInformation: result.attributes.additionalInformation,
+                userOneTime: result.attributes.userOneTime,
+                id: result.id
+              };
+
+              allVisits.push(obj);
+              i++;
+              if (results.length == i) {
+                response.success([allVisits, true]);
+              }
             }
           });
         } else {
@@ -145,6 +174,21 @@ Parse.Cloud.define('getAllVisits', function(request, response) {
   } else {
     response.success('Sorry, yoo are not allowed here!');
   };
+});
+
+Parse.Cloud.define('getAllVisitsUserData', function(request, response) {
+  var userId = request.params.userId,
+      user = new Parse.Query('User');
+
+  if (userId) {
+    user.equalTo('id', userId);
+    user.find({
+      success: function(userObj) {
+        //response.success(userObj.attributes.firstName + ' ' + userObj.attributes.lastName);
+        response.success(userObj[0]);
+      }
+    });
+  }
 });
 
 Parse.Cloud.define('getAllBooked', function(request, response) {
