@@ -2,6 +2,9 @@
 
 var _ = require('./underscore');
 var moment = require('./moment');
+var padTwoDigits = function(number) {
+  return (number < 10 ? '0' : '') + number;
+};
 
 Parse.Cloud.define('bookVisit', function(request, response) {
   var date = request.params.data.date,
@@ -14,7 +17,8 @@ Parse.Cloud.define('bookVisit', function(request, response) {
       Reservations = new Parse.Query('Reservation'),
       emailEmail = request.params.email.email,
       emailSubject = request.params.email.subject,
-      emailBody = request.params.email.body;
+      emailBody = request.params.email.body,
+      phone = request.params.email.phone;
 
   newReservation.set('date', date);
   if (user) {
@@ -26,6 +30,7 @@ Parse.Cloud.define('bookVisit', function(request, response) {
   newReservation.set('userOneTime', userOneTime);
   newReservation.set('additionalInformation', additionalInformation);
   newReservation.set('isCanceled', false);
+  newReservation.set('notified', 0);
 
   Reservations.equalTo('date', date);
 
@@ -43,6 +48,13 @@ Parse.Cloud.define('bookVisit', function(request, response) {
                     body: emailBody
                   }
                 });
+              }
+
+              if (phone) {
+                Parse.Cloud.run('sendSMS', {data: {
+                  to: phone, 
+                  msg: 'Dziekuje za umowienie wizyty. Dostaniesz jeszcze 2 przypomnienia. Wiecej informacji na stronie http://idz.do/AtPyLg Jaroslaw Downar-Zapolski'
+                }});
               }
             };
             response.success(result);
@@ -199,21 +211,78 @@ Parse.Cloud.define('getAllBooked', function(request, response) {
   visits.equalTo('isCanceled', false);
   visits.greaterThanOrEqualTo('date', from);
   visits.ascending('date');
-  visits.find({
-    success: function(results) {
-      _.each(results, function(result) {
-        allBookedVisits.push({
-          start: result.attributes.date,
-          end: result.attributes.date,
-          className: 'taken',
-        });
-      });
 
-      response.success(allBookedVisits);
-    },
-    error: function(result) {
-      response.success(result);
+  var query = (new Parse.Query(Parse.Role));
+
+  query.equalTo("name", "Administrator");
+  query.equalTo("users", request.user);
+  query.first().then(function(adminRole) {
+    if (adminRole && request.user) {    
+      visits.include('User');
+      visits.find({
+        success: function(results) {
+          _.each(results, function(result) {
+            if (!result.attributes.userOneTime) {
+              var user = result.get('user');
+              user.fetch({
+                success: function(userObj) {
+                  allBookedVisits.push({
+                    start: result.attributes.date,
+                    end: result.attributes.date,
+                    className: 'taken clickable',
+                    additionalInformation: result.attributes.additionalInformation,
+                    title: userObj.attributes.firstName + ' ' + userObj.attributes.lastName,
+                    user: userObj 
+                  });
+
+                  if (allBookedVisits.length === results.length) {
+                    response.success(allBookedVisits);
+                  }
+                }
+              });
+            } else {
+              allBookedVisits.push({
+                start: result.attributes.date,
+                end: result.attributes.date,
+                className: 'taken clickable',
+                additionalInformation: result.attributes.additionalInformation,
+                title: result.attributes.userOneTime.name + ' ' + result.attributes.userOneTime.lastname,
+                user: {
+                  attributes: result.attributes.userOneTime
+                }
+              });
+
+              if (allBookedVisits.length === results.length) {
+                response.success(allBookedVisits);
+              }
+            }
+          });
+
+        },
+        error: function(result) {
+          response.success(result);
+        }
+      });
+    } else {
+      visits.find({
+        success: function(results) {
+          _.each(results, function(result) {
+            allBookedVisits.push({
+              start: result.attributes.date,
+              end: result.attributes.date,
+              className: 'taken'
+            });
+          });
+
+          response.success(allBookedVisits);
+        },
+        error: function(result) {
+          response.success(result);
+        }
+      });
     }
+  }, function (notAdmin) {
+
   });
 });
 
@@ -308,32 +377,6 @@ Parse.Cloud.define('getMyVisits', function(request, response) {
       } else {
         response.success([null, false]);
       }
-    },
-    error: function(result) {
-      response.success(result);
-    }
-  });
-});
-
-Parse.Cloud.define('getAllBooked', function(request, response) {
-  var allBookedVisits = [],
-      from = request.params.from,
-      visits = new Parse.Query('Reservation');
-
-  visits.equalTo('isCanceled', false);
-  visits.greaterThanOrEqualTo('date', from);
-  visits.ascending('date');
-  visits.find({
-    success: function(results) {
-      _.each(results, function(result) {
-        allBookedVisits.push({
-          start: result.attributes.date,
-          end: result.attributes.date,
-          className: 'taken',
-        });
-      });
-
-      response.success(allBookedVisits);
     },
     error: function(result) {
       response.success(result);

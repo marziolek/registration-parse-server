@@ -20,7 +20,7 @@ function sendSMS(data) {
 
 Parse.Cloud.define('sendSMS', function(request, response) {
   var SMSdata = { 
-    from: request.params.data.from, 
+    from: 'Ginekolog', 
     to: request.params.data.to, 
     msg: request.params.data.msg
   };
